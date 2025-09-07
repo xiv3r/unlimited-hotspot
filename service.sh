@@ -32,12 +32,12 @@ sysctl -w kernel.timer_migration=0
 
 # Dynamically select the best available TCP congestion algorithm.
 AVAILABLE_CONGESTION=$(sysctl -n net.ipv4.tcp_available_congestion_control 2>/dev/null)
-if echo "$AVAILABLE_CONGESTION" | grep -q bbr3; then
-    sysctl -w net.ipv4.tcp_congestion_control=bbr3
-elif echo "$AVAILABLE_CONGESTION" | grep -q bbr2; then
+if echo "$AVAILABLE_CONGESTION" | grep -q bbr2; then
     sysctl -w net.ipv4.tcp_congestion_control=bbr2
 elif echo "$AVAILABLE_CONGESTION" | grep -q bbr; then
     sysctl -w net.ipv4.tcp_congestion_control=bbr
+elif echo "$AVAILABLE_CONGESTION" | grep -q fq_codel; then
+    sysctl -w net.ipv4.tcp_congestion_control=fq_codel
 else
     sysctl -w net.ipv4.tcp_congestion_control=cubic
 fi
@@ -60,9 +60,9 @@ cmd wifi force-country-code enabled BR
 for INTERFACE in "rndis0" "wlan0" "wlan1" "ap0" "bt-pan"; do
     # Skip if interface does not exist to avoid errors.
     if [ -d "/sys/class/net/$INTERFACE" ]; then
-        iptables -t mangle -A PREROUTING -i "$INTERFACE" -j TTL --ttl-inc 1
-        iptables -t mangle -I POSTROUTING -o "$INTERFACE" -j TTL --ttl-inc 1
-        ip6tables -t mangle -A PREROUTING ! -p icmpv6 -i "$INTERFACE" -j HL --hl-inc 1
-        ip6tables -t mangle -I POSTROUTING ! -p icmpv6 -o "$INTERFACE" -j HL --hl-inc 1
+        iptables -t mangle -A PREROUTING -i "$INTERFACE" -j TTL --ttl-set 64
+        iptables -t mangle -A POSTROUTING -o "$INTERFACE" -j TTL --ttl-set 64
+        ip6tables -t mangle -A PREROUTING ! -p icmpv6 -i "$INTERFACE" -j HL --hl-set 64
+        ip6tables -t mangle -A POSTROUTING ! -p icmpv6 -o "$INTERFACE" -j HL --hl-set 64
     fi
 done
